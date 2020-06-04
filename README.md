@@ -60,4 +60,5 @@ optional arguments:
   --addr ADDR  address where it listens (default: 0.0.0.0)
   --port PORT  port where it listens (default: 8666)
   --cfg CFG    path to the config file (default: config.yaml)
+  --log stream || path to file    Type of the log, stream or path to file
 ```

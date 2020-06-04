@@ -20,10 +20,6 @@ except ImportError:
 import sys
 import logging
 
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-                    level=logging.DEBUG,
-                    stream=sys.stdout)
-
 
 class RequestHandler(BaseHTTPRequestHandler):
     """A POST request handler."""
@@ -80,7 +76,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             # get project homepage
-            project = json_params['project']['name']
+            project_url = json_params['project']['web_url']
         except KeyError as err:
             self.send_response(500, "KeyError")
             logging.error("No project provided by the JSON payload")
@@ -93,12 +89,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            self.get_info_from_config(project, config)
+            self.get_info_from_config(project_url, config)
             self.do_token_mgmt(gitlab_token_header, json_payload)
         except KeyError as err:
             self.send_response(500, "KeyError")
-            if err == project:
-                logging.error("Project '%s' not found in %s", project, args.cfg.name)
+            if err == project_url:
+                logging.error("project_url '%s' not found in %s", project_url, args.cfg.name)
             elif err == 'command':
                 logging.error("Key 'command' not found in %s", args.cfg.name)
             elif err == 'gitlab_token':
@@ -131,6 +127,10 @@ def get_parser():
                        action="append",
                        dest="modules",
                        help="path to a python module to run")
+    parser.add_argument("--log",
+                        dest="log",
+                        default="stream",
+                        help="Type of the log, stream or path to file")
     return parser
 
 
@@ -144,8 +144,17 @@ if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
 
+    if args.log == "stream":
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
+    else:
+        logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                            level=logging.DEBUG,
+                            filename=args.log)
+
     if args.cfg:
-        config = yaml.load(args.cfg)
+        config = yaml.safe_load(args.cfg)
     elif args.modules:
         modules = [import_module(m, package=".") for m in args.modules]
 

@@ -15,6 +15,9 @@ The structure of the [configuration file](#example-config) requires the homepage
 ### Command
 Define, which command should be run after the hook was received.
 
+### Command by Event
+Define, which command should be run after the hook was received with base in event setted.
+
 ### Example config
 ```
 # file: config.yaml
@@ -26,6 +29,15 @@ https://git.example.ch/exmaple/myrepo:
 # test-repo
 https://git.example.ch/exmaple/test-repo:
   command: uname
+  gitlab_token: mysecret-test-repo
+# test-repo2 with command by events
+https://git.example.ch/example/test-repo2:
+  commands:
+    events:
+      issue:
+        command: [echo, "event issue received"]
+      note:
+        command: [echo, "event note received"]
   gitlab_token: mysecret-test-repo
 ```
 

@@ -28,21 +28,36 @@ class RequestHandler(BaseHTTPRequestHandler):
     # command, gitlab_token, foreground
     def get_info_from_config(self, project, config):
         # get command and token from config file
-        self.command = config[project]['command']
+        self.command = config[project]['command'] if 'command' in config[project] else False
+        self.commands = config[project]['commands'] if 'commands' in config[project] else False
         self.gitlab_token = config[project]['gitlab_token']
         self.foreground = 'background' in config[project] and not config[project]['background']
-        logging.info("Load project '%s' and run command '%s'", project, self.command)
+        logging.info("Load project '%s'", project)
 
-    def do_token_mgmt(self, gitlab_token_header, json_payload):
+    def do_token_mgmt(self, gitlab_token_header, json_payload, json_params):
         # Check if the gitlab token is valid
         if gitlab_token_header == self.gitlab_token:
-            logging.info("Start executing '%s'" % self.command)
+
             try:
-                # run command in background
-                p = Popen(self.command, stdin=PIPE)
-                p.stdin.write(json_payload);
-                if self.foreground:
-                    p.communicate()
+                if self.command:
+                    logging.info("Start executing '%s'" % self.command)
+                    # run command in background
+                    p = Popen(self.command, stdin=PIPE)
+                    p.stdin.write(json_payload)
+                    if self.foreground:
+                        p.communicate()
+                if self.commands:
+                    if 'events' in self.commands and ('object_kind' in json_params and json_params['object_kind'] in self.commands['events']):
+                        event = self.commands['events'][json_params['object_kind']]
+                        p_event_foreground = 'background' in event and not event['background']
+
+                        logging.info("Start executing command '%s' to event '%s'", event['command'], json_params['object_kind'])
+
+                        p_event = Popen(event['command'], stdin=PIPE)
+                        p_event.stdin.write(json_payload)
+
+                        if p_event_foreground:
+                            p_event.communicate()
                 self.send_response(200, "OK")
             except OSError as err:
                 self.send_response(500, "OSError")
@@ -90,7 +105,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             self.get_info_from_config(project_url, config)
-            self.do_token_mgmt(gitlab_token_header, json_payload)
+            self.do_token_mgmt(gitlab_token_header, json_payload, json_params)
         except KeyError as err:
             self.send_response(500, "KeyError")
             if err == project_url:

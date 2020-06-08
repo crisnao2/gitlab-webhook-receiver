@@ -44,8 +44,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                     # run command in background
                     p = Popen(self.command, stdin=PIPE)
                     p.stdin.write(json_payload)
+                    p.stdin.flush()
+
                     if self.foreground:
                         p.communicate()
+
+                    p.stdin.close()
                 if self.commands:
                     if 'events' in self.commands and ('object_kind' in json_params and json_params['object_kind'] in self.commands['events']):
                         event = self.commands['events'][json_params['object_kind']]
@@ -55,9 +59,12 @@ class RequestHandler(BaseHTTPRequestHandler):
 
                         p_event = Popen(event['command'], stdin=PIPE)
                         p_event.stdin.write(json_payload)
+                        p_event.stdin.flush()
 
                         if p_event_foreground:
                             p_event.communicate()
+
+                        p_event.stdin.close()
                 self.send_response(200, "OK")
             except OSError as err:
                 self.send_response(500, "OSError")

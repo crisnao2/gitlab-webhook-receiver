@@ -96,10 +96,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         if len(json_payload) > 0:
             json_params = json.loads(json_payload.decode('utf-8'))
 
-        try:
-            # get project homepage
+        if ('project' in json_params and 'web_url' in json_params['project']):
             project_url = json_params['project']['web_url']
-        except KeyError as err:
+        elif ('repository' in json_params and 'homepage' in json_params['repository']):
+            project_url = json_params['repository']['homepage']
+        else:
             self.send_response(500, "KeyError")
             logging.error("No project provided by the JSON payload")
             self.end_headers()
